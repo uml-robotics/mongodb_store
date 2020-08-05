@@ -121,7 +121,7 @@ class TopicPlayer(PlayerProcess):
         # load message class for this collection, they should all be the same
         msg_cls = mg_util.load_class(documents[0]["_meta"]["stored_class"])
         # check to see if message is an action goal to avoid any errors caused by preemption
-        self.msg_contains_goal_id = documents[0]["goal_id"]
+        self.msg_contains_goal_id = documents[0].get('goal_id')
         latch = False
         if "latch" in documents[0]["_meta"]:
             latch = documents[0]["_meta"]["latch"]
