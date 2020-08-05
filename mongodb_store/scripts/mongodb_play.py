@@ -120,7 +120,8 @@ class TopicPlayer(PlayerProcess):
 
         # load message class for this collection, they should all be the same
         msg_cls = mg_util.load_class(documents[0]["_meta"]["stored_class"])
-        self.msg_type = documents[0]["_meta"]["stored_type"]
+        # check to see if message is an action goal to avoid any errors caused by preemption
+        self.msg_contains_goal_id = documents[0]["goal_id"]
         latch = False
         if "latch" in documents[0]["_meta"]:
             latch = documents[0]["_meta"]["latch"]
@@ -156,17 +157,9 @@ class TopicPlayer(PlayerProcess):
         self.event.wait()
 
         timeout = 1
-        try:
-            action_goal_match = True if "Goal" in self.msg_type else False
-            msg_type_not_init = False
-        except AttributeError as e:
-            msg_type_not_init = True
 
         while running.value:
             try:
-                if msg_type_not_init:
-                    action_goal_match = True if "Goal" in self.msg_type else False
-                    msg_type_not_init = False
                 msg_time_tuple = self.to_publish.get(timeout=timeout)
                 publish_time = msg_time_tuple[1]
                 msg = msg_time_tuple[0]
@@ -179,12 +172,12 @@ class TopicPlayer(PlayerProcess):
                 else:
                     delay = publish_time - now
                     rospy.sleep(delay)
-                if action_goal_match:
+                # if message is an action goal then the goal_id time stamp should be changed to the current wall clock time
+                if self.msg_contains_goal_id is not None:
                     float_secs = time.time()
                     secs = int(float_secs)
-                    nsecs = int((float_secs - secs) * 1000000000)
                     msg.goal_id.stamp.secs = secs
-                    msg.goal_id.stamp.nsecs = nsecs
+                    msg.goal_id.stamp.nsecs = int((float_secs - secs) * 1000000000)
 
                 # rospy.loginfo('diff %f' % (publish_time - rospy.get_rostime()).to_sec())
                 self.publisher.publish(msg)
