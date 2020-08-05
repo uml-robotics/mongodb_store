@@ -172,6 +172,7 @@ class TopicPlayer(PlayerProcess):
                 else:
                     delay = publish_time - now
                     rospy.sleep(delay)
+
                 # if message is an action goal then the goal_id time stamp should be changed to the current wall clock time
                 if self.msg_contains_goal_id is not None:
                     float_secs = time.time()
