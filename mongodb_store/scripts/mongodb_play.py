@@ -120,7 +120,8 @@ class TopicPlayer(PlayerProcess):
 
         # load message class for this collection, they should all be the same
         msg_cls = mg_util.load_class(documents[0]["_meta"]["stored_class"])
-
+        # check to see if message is an action goal to avoid any errors caused by preemption
+        self.msg_contains_goal_id = documents[0].get('goal_id')
         latch = False
         if "latch" in documents[0]["_meta"]:
             latch = documents[0]["_meta"]["latch"]
@@ -171,6 +172,13 @@ class TopicPlayer(PlayerProcess):
                 else:
                     delay = publish_time - now
                     rospy.sleep(delay)
+
+                # if message is an action goal then the goal_id time stamp should be changed to the current wall clock time
+                if self.msg_contains_goal_id is not None:
+                    float_secs = time.time()
+                    secs = int(float_secs)
+                    msg.goal_id.stamp.secs = secs
+                    msg.goal_id.stamp.nsecs = int((float_secs - secs) * 1000000000)
 
                 # rospy.loginfo('diff %f' % (publish_time - rospy.get_rostime()).to_sec())
                 self.publisher.publish(msg)
